@@ -33,3 +33,26 @@ function render(data, target, expired) {
     `;
   });
 }
+const jobs = rows.map(r => {
+  const [
+    posisi,
+    unit,
+    jenis,
+    lokasi,
+    deadline,
+    gambar,
+    deskripsi,
+    link
+  ] = r.split(",");
+
+  return {
+    posisi,
+    unit,
+    jenis,
+    lokasi,
+    deadline,
+    gambar,
+    deskripsi,
+    link
+  };
+});
