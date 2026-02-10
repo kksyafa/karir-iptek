@@ -1,4 +1,4 @@
-const SHEET_URL = "https://https://docs.google.com/spreadsheets/d/1x5CgXBRZertwKa5ZVp3DqlvyXYCAxEVCyKJMt8-dPMY/Lowongan";
+const SHEET_URL = "https://opensheet.elk.sh/1x5CgXBRZertwKa5ZVp3DqlvyXYCAxEVCyKJMt8-dPMY/Lowongan";
 
 fetch(SHEET_URL)
   .then(res => res.json())
