@@ -2,49 +2,44 @@ const SHEET_URL = "https://opensheet.elk.sh/1x5CgXBRZertwKa5ZVp3DqlvyXYCAxEVCyKJ
 
 fetch(SHEET_URL)
   .then(res => res.json())
-  .then(data => renderJobs(data));
+  .then(data => {
+    const activeJobs = data.filter(job => job.status === "Aktif");
+    renderJobs(activeJobs);
+  })
+  .catch(err => {
+    document.getElementById("job-list").innerHTML =
+      `<p class="empty">Gagal memuat data</p>`;
+  });
 
-function renderJobs(data) {
+function renderJobs(jobs) {
   const container = document.getElementById("job-list");
   container.innerHTML = "";
 
-  data.forEach(job => {
+  if (!jobs.length) {
+    container.innerHTML = `<p class="empty">Belum ada lowongan aktif</p>`;
+    return;
+  }
+
+  jobs.forEach(job => {
     container.innerHTML += `
-      <div class="job-card horizontal">
-        <img src="${job.gambar}" class="job-thumb">
+      <div class="job-card">
+        <img class="job-thumb"
+             src="${job.gambar || 'https://via.placeholder.com/120'}">
 
         <div class="job-content">
           <h3>${job.posisi}</h3>
           <p class="job-desc">${job.deskripsi}</p>
 
           <div class="job-meta">
-            <span>${job.lokasi}</span>
             <span>${job.tipe}</span>
+            <span>${job.lokasi}</span>
           </div>
 
-          <a href="#" class="btn-apply">Lamar Sekarang</a>
+          <a class="btn-apply" href="${job.link}" target="_blank">
+            Lamar Sekarang
+          </a>
         </div>
       </div>
     `;
   });
 }
-<div class="job-card">
-  <img src="gambar.jpg" class="job-thumb">
-
-  <div class="job-content">
-    <span class="badge active">Aktif</span>
-
-    <h3>Desainer Grafis</h3>
-    <p class="job-desc">Deskripsi singkat lowongan kerja...</p>
-
-    <div class="job-meta">
-      <span>Full Time</span>
-      <span>Tangerang Selatan</span>
-    </div>
-
-    <div class="job-action">
-      <a href="#" class="btn-apply">Lamar Sekarang</a>
-    </div>
-  </div>
-</div>
-
