@@ -29,8 +29,8 @@ h1 {
 }
 
 .job-image {
-  width: 200px;
-  min-height: 140px;
+  width: 220px;
+  min-height: 160px;
   object-fit: cover;
   background: #e5e7eb;
 }
