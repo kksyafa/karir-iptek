@@ -28,3 +28,23 @@ function renderJobs(data) {
     `;
   });
 }
+<div class="job-card">
+  <img src="gambar.jpg" class="job-thumb">
+
+  <div class="job-content">
+    <span class="badge active">Aktif</span>
+
+    <h3>Desainer Grafis</h3>
+    <p class="job-desc">Deskripsi singkat lowongan kerja...</p>
+
+    <div class="job-meta">
+      <span>Full Time</span>
+      <span>Tangerang Selatan</span>
+    </div>
+
+    <div class="job-action">
+      <a href="#" class="btn-apply">Lamar Sekarang</a>
+    </div>
+  </div>
+</div>
+
