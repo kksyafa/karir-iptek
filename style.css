@@ -29,7 +29,7 @@ h1 {
 }
 
 .job-image {
-  width: 180px;
+  width: 80px;
   min-height: 60px;
   object-fit: cover;
   background: #e5e7eb;
