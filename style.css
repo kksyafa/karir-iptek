@@ -1,58 +1,32 @@
-/* ===============================
-   GLOBAL RESET (ANTI ERROR)
-================================ */
-* {
-  box-sizing: border-box;
-}
-
-html, body {
-  margin: 0;
-  padding: 0;
+/* WRAPPER */
+#career-app {
+  background: #f3f4f6;
+  padding: 40px;
   font-family: Arial, Helvetica, sans-serif;
-  background: #f2f4f7;
-  color: #111;
 }
 
-/* ===============================
-   MAIN CONTAINER
-================================ */
-#job-list {
-  max-width: 1100px;
-  margin: 40px auto;
-  padding: 20px;
-}
-
-/* ===============================
-   JOB CARD
-================================ */
+/* CARD */
 .job-card {
   display: flex;
   gap: 16px;
   background: #ffffff;
   border-radius: 12px;
   padding: 16px;
-  margin-bottom: 20px;
-  border: 1px solid #e5e7eb;
+  max-width: 900px;
+  margin: auto;
+  border: 1px solid #ddd;
 }
 
-/* ===============================
-   IMAGE
-================================ */
+/* IMAGE */
 .job-thumb {
   width: 120px;
   height: 120px;
-  background: #ddd;
   object-fit: cover;
   border-radius: 10px;
+  background: #ccc;
 }
 
-/* ===============================
-   CONTENT
-================================ */
-.job-content {
-  flex: 1;
-}
-
+/* CONTENT */
 .job-content h3 {
   margin: 0 0 6px;
   font-size: 18px;
@@ -64,38 +38,25 @@ html, body {
   margin-bottom: 10px;
 }
 
-/* ===============================
-   META
-================================ */
+/* META */
 .job-meta span {
   display: inline-block;
-  background: #eef2ff;
-  color: #1e40af;
   font-size: 12px;
+  background: #e0e7ff;
+  color: #1e40af;
   padding: 4px 10px;
   border-radius: 20px;
   margin-right: 6px;
 }
 
-/* ===============================
-   BUTTON
-================================ */
+/* BUTTON */
 .btn-apply {
   display: inline-block;
   margin-top: 10px;
   padding: 8px 14px;
   background: #2563eb;
-  color: #fff;
+  color: white;
   text-decoration: none;
   border-radius: 8px;
   font-size: 13px;
-}
-
-/* ===============================
-   EMPTY STATE
-================================ */
-.empty {
-  text-align: center;
-  color: #666;
-  font-size: 15px;
 }
