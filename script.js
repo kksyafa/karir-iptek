@@ -10,11 +10,19 @@ function renderJobs(data) {
 
   data.forEach(job => {
     container.innerHTML += `
-      <div class="job-card">
+      <div class="job-card horizontal">
         <img src="${job.gambar}" class="job-thumb">
-        <div>
+
+        <div class="job-content">
           <h3>${job.posisi}</h3>
-          <p>${job.deskripsi}</p>
+          <p class="job-desc">${job.deskripsi}</p>
+
+          <div class="job-meta">
+            <span>${job.lokasi}</span>
+            <span>${job.tipe}</span>
+          </div>
+
+          <a href="#" class="btn-apply">Lamar Sekarang</a>
         </div>
       </div>
     `;
