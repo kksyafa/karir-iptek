@@ -50,8 +50,10 @@ function renderJobs(rows) {
         src="${gambar}"
         class="job-image"
         alt="${posisi}"
-        onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'"
+        onload="console.log('IMAGE OK:', this.src)"
+        onerror="console.error('IMAGE FAIL:', this.src); this.src='https://via.placeholder.com/300x200?text=No+Image';"
       >
+
       <div class="job-body">
         <h3>${posisi}</h3>
         <p class="meta">${unit} • ${jenis} • ${lokasi}</p>
