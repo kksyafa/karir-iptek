@@ -1,3 +1,4 @@
+console.log("SCRIPT JALAN");
 const SHEET_URL = "https://opensheet.elk.sh/1x5CgXBRZertwKa5ZVp3DqlvyXYCAxEVCyKJMt8-dPMY/Sheet1";
 
 fetch(SHEET_URL)
@@ -10,6 +11,12 @@ fetch(SHEET_URL)
     document.getElementById("job-list").innerHTML =
       `<p class="empty">Gagal memuat data</p>`;
   });
+    .then(data => {
+  console.log("DATA DARI SHEET:", data);
+  const activeJobs = data.filter(job => isActive(job.deadline));
+  renderJobs(activeJobs);
+  });
+
 
 function isActive(deadline) {
   if (!deadline) return true;
