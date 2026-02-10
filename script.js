@@ -24,45 +24,59 @@ function isActive(deadline) {
   return end >= today;
 }
 
-function renderJobs(jobs) {
-  const container = document.getElementById("job-list");
+function renderJobs(data) {
+  const container = document.getElementById("jobs");
   container.innerHTML = "";
 
-  if (!jobs.length) {
-    container.innerHTML =
-      `<p class="empty">Belum ada lowongan aktif</p>`;
+  const today = new Date();
+
+  const activeJobs = data.filter((row, index) => {
+    if (index === 0) return false; // skip header
+    const deadline = new Date(row[4]);
+    return deadline >= today;
+  });
+
+  if (activeJobs.length === 0) {
+    container.innerHTML = `<p class="empty">Belum ada lowongan aktif</p>`;
     return;
   }
 
-  jobs.forEach(job => {
-    container.innerHTML += `
-      <div class="job-card">
+  activeJobs.forEach(row => {
+    const [
+      posisi,
+      unit,
+      jenis,
+      lokasi,
+      deadline,
+      gambar,
+      deskripsi,
+      link
+    ] = row;
 
-        <img class="job-thumb"
-             src="${job.gambar || 'https://via.placeholder.com/120'}"
-             alt="${job.posisi}">
+    const imageUrl = convertDriveLink(gambar);
 
-        <div class="job-content">
+    const card = document.createElement("div");
+    card.className = "job-card";
 
-          <h3>${job.posisi}</h3>
+    card.innerHTML = `
+      <img 
+        src="${imageUrl}" 
+        class="job-image" 
+        alt="${posisi}"
+        onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'"
+      >
 
-          <p class="job-desc">${job.deskripsi}</p>
-
-          <div class="job-meta">
-            <span>${job.unit}</span>
-            <span>${job.jenis}</span>
-            <span>${job.lokasi}</span>
-            <span>Deadline: ${job.deadline}</span>
-          </div>
-
-          <a class="btn-apply"
-             href="${job.link}"
-             target="_blank">
-             Lamar Sekarang
-          </a>
-
-        </div>
+      <div class="job-body">
+        <h3>${posisi}</h3>
+        <p class="meta">${unit} • ${jenis}</p>
+        <p class="lokasi">${lokasi}</p>
+        <p class="desc">${deskripsi}</p>
+        <a href="${link}" target="_blank" class="btn">
+          Lamar Sekarang
+        </a>
       </div>
     `;
+
+    container.appendChild(card);
   });
 }
