@@ -1,19 +1,304 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Karir & Lowongan</title>
+  <meta charset="UTF-8">
+  <title>Portal Loker & Beasiswa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Menambahkan library PapaParse untuk membaca data CSV dari Google Sheets dengan mudah -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <style>
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3b82f6;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
 
-  <link rel="stylesheet" href="style.css">
+    .modal-active {
+      display: flex !important;
+      animation: fadeIn 0.2s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800 font-sans p-4 md:p-8">
 
-  <section class="container">
-    <h1>Lowongan Karir</h1>
-    <div id="jobs"></div>
-  </section>
+  <div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <header class="text-center mb-10">
+      <h1 class="text-3xl md:text-4xl font-bold text-blue-600 mb-2">Portal Loker & Beasiswa</h1>
+      <p class="text-gray-500 italic">"Your Future Starts Here"</p>
+    </header>
 
-  <script src="script.js"></script>
+    <!-- Tombol Navigasi -->
+    <div class="flex justify-center space-x-4 mb-8">
+      <button id="btn-loker" onclick="tampilkanTab('loker')" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-full shadow transition">
+        Lowongan Kerja
+      </button>
+      <button id="btn-beasiswa" onclick="tampilkanTab('beasiswa')" class="px-6 py-2 bg-gray-200 text-gray-700 font-semibold rounded-full shadow transition">
+        Beasiswa
+      </button>
+    </div>
+
+    <!-- Status Koneksi -->
+    <div id="status-sheet" class="text-center text-xs text-gray-400 mb-4 hidden italic">Menghubungkan ke database...</div>
+
+    <!-- Area Loading -->
+    <div id="loading" class="flex justify-center items-center py-10">
+      <div class="loader"></div>
+    </div>
+
+    <!-- Kontainer Data -->
+    <div id="konten-loker" class="hidden grid gap-6 md:grid-cols-2"></div>
+    <div id="konten-beasiswa" class="hidden grid gap-6 md:grid-cols-2"></div>
+  </div>
+
+  <!-- MODAL DETAIL -->
+  <div id="modal-detail" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div class="p-6 md:p-8">
+        <div class="flex justify-between items-start mb-4">
+          <div id="modal-header"></div>
+          <button onclick="tutupModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+        <hr class="mb-6">
+        <div id="modal-body" class="prose max-w-none text-gray-700 leading-relaxed"></div>
+        <div class="mt-8 flex flex-col sm:flex-row gap-3">
+          <a id="btn-apply" href="#" target="_blank" class="flex-1 text-center bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition">Lamar Sekarang</a>
+          <button onclick="tutupModal()" class="flex-1 bg-gray-100 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-200 transition">Tutup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /** * KONFIGURASI LINK GOOGLE SHEETS
+     * PENTING: Pastikan format tanggal di Google Sheets adalah YYYY-MM-DD (Contoh: 2026-12-31) agar deteksi otomatis akurat.
+     */
+    const SHEET_URL_LOKER = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRm6bFjMnCYKvqj-pADsuNaO6rWKNRJcpDhKAkVT58XnNI4tMCDhAb82sv65Ekt96S_aLarjm7nT6WB/pub?gid=0&single=true&output=csv';
+    const SHEET_URL_BEASISWA = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRm6bFjMnCYKvqj-pADsuNaO6rWKNRJcpDhKAkVT58XnNI4tMCDhAb82sv65Ekt96S_aLarjm7nT6WB/pub?gid=1550961366&single=true&output=csv';
+
+    let dataGlobal = { loker: [], beasiswa: [] };
+
+    window.onload = function() {
+      muatDataDariSheets();
+    };
+
+    // Fungsi pembantu untuk mengecek apakah tanggal sudah lewat
+    function cekStatusAktif(tanggalInput) {
+      if (!tanggalInput || tanggalInput.trim() === "") return { teks: "Kontak Admin", kelas: "bg-gray-100 text-gray-600", isExpired: false };
+      
+      const hariIni = new Date();
+      hariIni.setHours(0, 0, 0, 0); // Reset waktu ke jam 00:00 agar perbandingan tanggal murni
+      
+      const deadline = new Date(tanggalInput);
+      
+      if (isNaN(deadline.getTime())) {
+         return { teks: "Format Salah", kelas: "bg-orange-100 text-orange-600", isExpired: false };
+      }
+
+      if (deadline < hariIni) {
+        return { teks: "Sudah Tutup", kelas: "bg-red-100 text-red-600", isExpired: true };
+      } else {
+        return { teks: "Masih Buka", kelas: "bg-green-100 text-green-600", isExpired: false };
+      }
+    }
+
+    async function muatDataDariSheets() {
+      const statusElement = document.getElementById('status-sheet');
+      statusElement.classList.remove('hidden');
+      
+      try {
+        const [responseLoker, responseBeasiswa] = await Promise.all([
+          fetchCSV(SHEET_URL_LOKER),
+          fetchCSV(SHEET_URL_BEASISWA)
+        ]);
+
+        dataGlobal.loker = responseLoker;
+        dataGlobal.beasiswa = responseBeasiswa;
+
+        prosesData(dataGlobal);
+        statusElement.innerText = 'Database Terhubung ✅';
+        statusElement.classList.replace('text-gray-400', 'text-green-500');
+      } catch (error) {
+        console.error("Gagal memuat data:", error);
+        document.getElementById('loading').innerHTML = `<p class="text-red-500 text-center">Gagal memuat database. Periksa link CSV Anda.</p>`;
+      }
+    }
+
+    function fetchCSV(url) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(url, {
+          download: true,
+          header: true,
+          skipEmptyLines: 'greedy',
+          complete: (results) => resolve(results.data),
+          error: (error) => reject(error)
+        });
+      });
+    }
+
+    function prosesData(data) {
+      document.getElementById('loading').style.display = 'none';
+      renderLoker(data.loker);
+      renderBeasiswa(data.beasiswa);
+      tampilkanTab('loker');
+    }
+
+    function renderLoker(lokerArray) {
+      const kontainer = document.getElementById('konten-loker');
+      const dataValid = lokerArray.filter(item => item && item.judul && item.judul.trim() !== "");
+      
+      if (dataValid.length === 0) {
+        kontainer.innerHTML = '<p class="col-span-full text-center text-gray-400 py-10">Belum ada data lowongan kerja.</p>';
+        return;
+      }
+
+      kontainer.innerHTML = dataValid.map((item, index) => {
+        const status = cekStatusAktif(item.deadline);
+        return `
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 card-hover cursor-pointer overflow-hidden relative" onclick="bukaModal('loker', ${index})">
+            <div class="flex justify-between items-start mb-3">
+              <span class="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full uppercase tracking-wider">${item.tipe || 'Full-time'}</span>
+              <span class="px-3 py-1 ${status.kelas} text-[10px] font-black rounded-md uppercase">${status.teks}</span>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 line-clamp-1">${item.judul}</h3>
+            <p class="text-blue-600 font-medium mb-4">${item.perusahaan}</p>
+            <div class="flex items-center text-sm text-gray-500">
+              <span>📍 ${item.lokasi || '-'}</span>
+            </div>
+            <div class="mt-4 text-blue-600 text-sm font-bold flex items-center">
+              Lihat Detail <span class="ml-1">→</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderBeasiswa(beasiswaArray) {
+      const kontainer = document.getElementById('konten-beasiswa');
+      const dataValid = beasiswaArray.filter(item => item && item.nama && item.nama.trim() !== "");
+
+      if (dataValid.length === 0) {
+        kontainer.innerHTML = '<p class="col-span-full text-center text-gray-400 py-10">Belum ada data beasiswa.</p>';
+        return;
+      }
+
+      kontainer.innerHTML = dataValid.map((item, index) => {
+        const status = cekStatusAktif(item.deadline);
+        return `
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 card-hover cursor-pointer relative" onclick="bukaModal('beasiswa', ${index})">
+            <div class="flex justify-between items-start mb-3">
+              <span class="px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full uppercase tracking-wider">Beasiswa</span>
+              <span class="px-3 py-1 ${status.kelas} text-[10px] font-black rounded-md uppercase">${status.teks}</span>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 line-clamp-1">${item.nama}</h3>
+            <p class="text-green-600 font-medium mb-4">${item.penyelenggara}</p>
+            <div class="text-sm text-gray-500 flex justify-between items-center">
+               <span>⏳ Deadline: <span class="${status.isExpired ? 'text-red-500 font-bold' : 'text-gray-700'}">${item.deadline || '-'}</span></span>
+            </div>
+            <div class="mt-4 text-green-700 text-sm font-bold flex items-center">
+              Detail Beasiswa <span class="ml-1">→</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function bukaModal(tipe, index) {
+      const list = tipe === 'loker' ? dataGlobal.loker.filter(item => item && item.judul) : dataGlobal.beasiswa.filter(item => item && item.nama);
+      const item = list[index];
+      if (!item) return;
+      
+      const status = cekStatusAktif(item.deadline);
+      const header = document.getElementById('modal-header');
+      const body = document.getElementById('modal-body');
+      const btnApply = document.getElementById('btn-apply');
+
+      if (tipe === 'loker') {
+        header.innerHTML = `
+          <h2 class="text-2xl font-bold text-gray-800">${item.judul}</h2>
+          <p class="text-blue-600 font-semibold">${item.perusahaan} • ${item.lokasi || ''}</p>
+        `;
+      } else {
+        header.innerHTML = `
+          <h2 class="text-2xl font-bold text-gray-800">${item.nama}</h2>
+          <p class="text-green-600 font-semibold">${item.penyelenggara} • ${item.tingkat || ''}</p>
+        `;
+      }
+
+      body.innerHTML = `
+        <div class="mb-4 flex items-center">
+           <span class="px-4 py-1.5 ${status.kelas} rounded-lg font-bold text-sm uppercase mr-3">${status.teks}</span>
+           <span class="text-sm text-gray-500">Batas Pendaftaran: <b>${item.deadline || 'Tidak ditentukan'}</b></span>
+        </div>
+        <p class="whitespace-pre-line text-lg">${item.deskripsi || 'Tidak ada deskripsi tambahan.'}</p>
+      `;
+
+      btnApply.href = item.link || '#';
+      
+      // Jika sudah expired, tombol pendaftaran dinonaktifkan
+      if (status.isExpired || !item.link || !item.link.startsWith('http')) {
+        btnApply.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none', 'grayscale');
+        btnApply.innerText = status.isExpired ? "Pendaftaran Ditutup" : "Link Tidak Tersedia";
+      } else {
+        btnApply.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none', 'grayscale');
+        btnApply.innerText = tipe === 'loker' ? "Lamar Sekarang" : "Daftar Beasiswa";
+        
+        // Atur warna tombol berdasarkan tipe
+        if(tipe === 'loker') {
+            btnApply.className = "flex-1 text-center bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition";
+        } else {
+            btnApply.className = "flex-1 text-center bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition";
+        }
+      }
+
+      document.getElementById('modal-detail').classList.add('modal-active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function tutupModal() {
+      document.getElementById('modal-detail').classList.remove('modal-active');
+      document.body.style.overflow = 'auto';
+    }
+
+    function tampilkanTab(tabName) {
+      const kontenLoker = document.getElementById('konten-loker');
+      const kontenBeasiswa = document.getElementById('konten-beasiswa');
+      const btnLoker = document.getElementById('btn-loker');
+      const btnBeasiswa = document.getElementById('btn-beasiswa');
+
+      if (tabName === 'loker') {
+        kontenLoker.classList.remove('hidden');
+        kontenBeasiswa.classList.add('hidden');
+        btnLoker.className = "px-6 py-2 bg-blue-600 text-white font-semibold rounded-full shadow transition";
+        btnBeasiswa.className = "px-6 py-2 bg-gray-200 text-gray-700 font-semibold rounded-full transition";
+      } else {
+        kontenBeasiswa.classList.remove('hidden');
+        kontenLoker.classList.add('hidden');
+        btnBeasiswa.className = "px-6 py-2 bg-blue-600 text-white font-semibold rounded-full shadow transition";
+        btnLoker.className = "px-6 py-2 bg-gray-200 text-gray-700 font-semibold rounded-full transition";
+      }
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById('modal-detail');
+      if (event.target == modal) tutupModal();
+    }
+  </script>
 </body>
 </html>
