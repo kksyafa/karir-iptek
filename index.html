@@ -44,7 +44,7 @@
       <p class="text-gray-500 italic">"Your Future Starts Here"</p>
     </header>
 
-    <!-- Tombol Navigasi -->
+    <!-- Tombol Navigasi Tab -->
     <div class="flex justify-center space-x-4 mb-8">
       <button id="btn-loker" onclick="tampilkanTab('loker')" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-full shadow transition">
         Lowongan Kerja
@@ -63,8 +63,15 @@
     </div>
 
     <!-- Kontainer Data -->
-    <div id="konten-loker" class="hidden grid gap-6 md:grid-cols-2"></div>
-    <div id="konten-beasiswa" class="hidden grid gap-6 md:grid-cols-2"></div>
+    <div id="konten-loker" class="hidden">
+      <div id="grid-loker" class="grid gap-6 md:grid-cols-2"></div>
+      <div id="pagination-loker" class="mt-10 flex justify-center items-center space-x-4"></div>
+    </div>
+
+    <div id="konten-beasiswa" class="hidden">
+      <div id="grid-beasiswa" class="grid gap-6 md:grid-cols-2"></div>
+      <div id="pagination-beasiswa" class="mt-10 flex justify-center items-center space-x-4"></div>
+    </div>
   </div>
 
   <!-- MODAL DETAIL -->
@@ -86,11 +93,14 @@
   </div>
 
   <script>
-    /** * KONFIGURASI LINK GOOGLE SHEETS
-     * PENTING: Pastikan format tanggal di Google Sheets adalah YYYY-MM-DD (Contoh: 2026-12-31) agar deteksi otomatis akurat.
-     */
+    /** * KONFIGURASI LINK GOOGLE SHEETS */
     const SHEET_URL_LOKER = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRm6bFjMnCYKvqj-pADsuNaO6rWKNRJcpDhKAkVT58XnNI4tMCDhAb82sv65Ekt96S_aLarjm7nT6WB/pub?gid=0&single=true&output=csv';
     const SHEET_URL_BEASISWA = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRm6bFjMnCYKvqj-pADsuNaO6rWKNRJcpDhKAkVT58XnNI4tMCDhAb82sv65Ekt96S_aLarjm7nT6WB/pub?gid=1550961366&single=true&output=csv';
+
+    // Konfigurasi Paginasi
+    const ITEM_PER_HALAMAN = 6;
+    let halSekarangLoker = 1;
+    let halSekarangBeasiswa = 1;
 
     let dataGlobal = { loker: [], beasiswa: [] };
 
@@ -98,18 +108,12 @@
       muatDataDariSheets();
     };
 
-    // Fungsi pembantu untuk mengecek apakah tanggal sudah lewat
     function cekStatusAktif(tanggalInput) {
       if (!tanggalInput || tanggalInput.trim() === "") return { teks: "Kontak Admin", kelas: "bg-gray-100 text-gray-600", isExpired: false };
-      
       const hariIni = new Date();
       hariIni.setHours(0, 0, 0, 0); 
-      
       const deadline = new Date(tanggalInput);
-      
-      if (isNaN(deadline.getTime())) {
-         return { teks: "Format Salah", kelas: "bg-orange-100 text-orange-600", isExpired: false };
-      }
+      if (isNaN(deadline.getTime())) return { teks: "Format Salah", kelas: "bg-orange-100 text-orange-600", isExpired: false };
 
       if (deadline < hariIni) {
         return { teks: "Sudah Tutup", kelas: "bg-red-100 text-red-600", isExpired: true };
@@ -128,11 +132,10 @@
           fetchCSV(SHEET_URL_BEASISWA)
         ]);
 
-        // .reverse() digunakan untuk menampilkan data terbaru (baris bawah di Sheet) ke urutan atas di Web
-        dataGlobal.loker = responseLoker.reverse();
-        dataGlobal.beasiswa = responseBeasiswa.reverse();
+        dataGlobal.loker = responseLoker.filter(item => item && item.judul && item.judul.trim() !== "").reverse();
+        dataGlobal.beasiswa = responseBeasiswa.filter(item => item && item.nama && item.nama.trim() !== "").reverse();
 
-        prosesData(dataGlobal);
+        prosesData();
         statusElement.innerText = 'Database Terhubung ✅';
         statusElement.classList.replace('text-gray-400', 'text-green-500');
       } catch (error) {
@@ -153,26 +156,32 @@
       });
     }
 
-    function prosesData(data) {
+    function prosesData() {
       document.getElementById('loading').style.display = 'none';
-      renderLoker(data.loker);
-      renderBeasiswa(data.beasiswa);
+      renderLoker();
+      renderBeasiswa();
       tampilkanTab('loker');
     }
 
-    function renderLoker(lokerArray) {
-      const kontainer = document.getElementById('konten-loker');
-      const dataValid = lokerArray.filter(item => item && item.judul && item.judul.trim() !== "");
+    // Fungsi Render dengan Paginasi
+    function renderLoker() {
+      const kontainer = document.getElementById('grid-loker');
+      const paginationCont = document.getElementById('pagination-loker');
       
-      if (dataValid.length === 0) {
+      const awal = (halSekarangLoker - 1) * ITEM_PER_HALAMAN;
+      const akhir = awal + ITEM_PER_HALAMAN;
+      const dataHalaman = dataGlobal.loker.slice(awal, akhir);
+
+      if (dataGlobal.loker.length === 0) {
         kontainer.innerHTML = '<p class="col-span-full text-center text-gray-400 py-10">Belum ada data lowongan kerja.</p>';
         return;
       }
 
-      kontainer.innerHTML = dataValid.map((item, index) => {
+      kontainer.innerHTML = dataHalaman.map((item, index) => {
         const status = cekStatusAktif(item.deadline);
+        const indexAsli = awal + index;
         return `
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 card-hover cursor-pointer overflow-hidden relative" onclick="bukaModal('loker', ${index})">
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 card-hover cursor-pointer overflow-hidden relative" onclick="bukaModal('loker', ${indexAsli})">
             <div class="flex justify-between items-start mb-3">
               <span class="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full uppercase tracking-wider">${item.tipe || 'Full-time'}</span>
               <span class="px-3 py-1 ${status.kelas} text-[10px] font-black rounded-md uppercase">${status.teks}</span>
@@ -182,46 +191,81 @@
             <div class="flex items-center text-sm text-gray-500">
               <span>📍 ${item.lokasi || '-'}</span>
             </div>
-            <div class="mt-4 text-blue-600 text-sm font-bold flex items-center">
-              Lihat Detail <span class="ml-1">→</span>
-            </div>
           </div>
         `;
       }).join('');
+
+      renderNavigasi('loker', dataGlobal.loker.length, halSekarangLoker, paginationCont);
     }
 
-    function renderBeasiswa(beasiswaArray) {
-      const kontainer = document.getElementById('konten-beasiswa');
-      const dataValid = beasiswaArray.filter(item => item && item.nama && item.nama.trim() !== "");
+    function renderBeasiswa() {
+      const kontainer = document.getElementById('grid-beasiswa');
+      const paginationCont = document.getElementById('pagination-beasiswa');
 
-      if (dataValid.length === 0) {
+      const awal = (halSekarangBeasiswa - 1) * ITEM_PER_HALAMAN;
+      const akhir = awal + ITEM_PER_HALAMAN;
+      const dataHalaman = dataGlobal.beasiswa.slice(awal, akhir);
+
+      if (dataGlobal.beasiswa.length === 0) {
         kontainer.innerHTML = '<p class="col-span-full text-center text-gray-400 py-10">Belum ada data beasiswa.</p>';
         return;
       }
 
-      kontainer.innerHTML = dataValid.map((item, index) => {
+      kontainer.innerHTML = dataHalaman.map((item, index) => {
         const status = cekStatusAktif(item.deadline);
+        const indexAsli = awal + index;
         return `
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 card-hover cursor-pointer relative" onclick="bukaModal('beasiswa', ${index})">
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 card-hover cursor-pointer relative" onclick="bukaModal('beasiswa', ${indexAsli})">
             <div class="flex justify-between items-start mb-3">
               <span class="px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full uppercase tracking-wider">Beasiswa</span>
               <span class="px-3 py-1 ${status.kelas} text-[10px] font-black rounded-md uppercase">${status.teks}</span>
             </div>
             <h3 class="text-xl font-bold text-gray-800 line-clamp-1">${item.nama}</h3>
             <p class="text-green-600 font-medium mb-4">${item.penyelenggara}</p>
-            <div class="text-sm text-gray-500 flex justify-between items-center">
-               <span>⏳ Deadline: <span class="${status.isExpired ? 'text-red-500 font-bold' : 'text-gray-700'}">${item.deadline || '-'}</span></span>
-            </div>
-            <div class="mt-4 text-green-700 text-sm font-bold flex items-center">
-              Detail Beasiswa <span class="ml-1">→</span>
+            <div class="text-sm text-gray-500">
+               ⏳ Deadline: <span class="${status.isExpired ? 'text-red-500 font-bold' : 'text-gray-700'}">${item.deadline || '-'}</span>
             </div>
           </div>
         `;
       }).join('');
+
+      renderNavigasi('beasiswa', dataGlobal.beasiswa.length, halSekarangBeasiswa, paginationCont);
+    }
+
+    function renderNavigasi(tipe, totalData, halSekarang, kontainer) {
+      const totalHalaman = Math.ceil(totalData / ITEM_PER_HALAMAN);
+      if (totalHalaman <= 1) {
+        kontainer.innerHTML = "";
+        return;
+      }
+
+      kontainer.innerHTML = `
+        <button onclick="gantiHalaman('${tipe}', ${halSekarang - 1})" 
+          ${halSekarang === 1 ? 'disabled' : ''} 
+          class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-30">
+          Sebelumnya
+        </button>
+        <span class="text-sm text-gray-600 font-bold">Halaman ${halSekarang} dari ${totalHalaman}</span>
+        <button onclick="gantiHalaman('${tipe}', ${halSekarang + 1})" 
+          ${halSekarang === totalHalaman ? 'disabled' : ''} 
+          class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-30">
+          Berikutnya
+        </button>
+      `;
+    }
+
+    function gantiHalaman(tipe, halBaru) {
+      if (tipe === 'loker') {
+        halSekarangLoker = halBaru;
+        renderLoker();
+      } else {
+        halSekarangBeasiswa = halBaru;
+        renderBeasiswa();
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function bukaModal(tipe, index) {
-      // Pastikan index mengarah ke array yang sudah di-reverse di prosesData
       const list = tipe === 'loker' ? dataGlobal.loker : dataGlobal.beasiswa;
       const item = list[index];
       if (!item) return;
