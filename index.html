@@ -103,7 +103,7 @@
       if (!tanggalInput || tanggalInput.trim() === "") return { teks: "Kontak Admin", kelas: "bg-gray-100 text-gray-600", isExpired: false };
       
       const hariIni = new Date();
-      hariIni.setHours(0, 0, 0, 0); // Reset waktu ke jam 00:00 agar perbandingan tanggal murni
+      hariIni.setHours(0, 0, 0, 0); 
       
       const deadline = new Date(tanggalInput);
       
@@ -128,8 +128,9 @@
           fetchCSV(SHEET_URL_BEASISWA)
         ]);
 
-        dataGlobal.loker = responseLoker;
-        dataGlobal.beasiswa = responseBeasiswa;
+        // .reverse() digunakan untuk menampilkan data terbaru (baris bawah di Sheet) ke urutan atas di Web
+        dataGlobal.loker = responseLoker.reverse();
+        dataGlobal.beasiswa = responseBeasiswa.reverse();
 
         prosesData(dataGlobal);
         statusElement.innerText = 'Database Terhubung ✅';
@@ -220,7 +221,8 @@
     }
 
     function bukaModal(tipe, index) {
-      const list = tipe === 'loker' ? dataGlobal.loker.filter(item => item && item.judul) : dataGlobal.beasiswa.filter(item => item && item.nama);
+      // Pastikan index mengarah ke array yang sudah di-reverse di prosesData
+      const list = tipe === 'loker' ? dataGlobal.loker : dataGlobal.beasiswa;
       const item = list[index];
       if (!item) return;
       
@@ -251,7 +253,6 @@
 
       btnApply.href = item.link || '#';
       
-      // Jika sudah expired, tombol pendaftaran dinonaktifkan
       if (status.isExpired || !item.link || !item.link.startsWith('http')) {
         btnApply.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none', 'grayscale');
         btnApply.innerText = status.isExpired ? "Pendaftaran Ditutup" : "Link Tidak Tersedia";
@@ -259,7 +260,6 @@
         btnApply.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none', 'grayscale');
         btnApply.innerText = tipe === 'loker' ? "Lamar Sekarang" : "Daftar Beasiswa";
         
-        // Atur warna tombol berdasarkan tipe
         if(tipe === 'loker') {
             btnApply.className = "flex-1 text-center bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition";
         } else {
